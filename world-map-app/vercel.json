@@ -1,0 +1,17 @@
+{
+    "public": "dist/world-map-app",
+    "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+
+        "builds": [
+          {
+            "src": "angular.json",
+            "use": "@vercel/angular"
+          }
+        ],
+        "env": {
+          "MAPBOX_ACCESS_TOKEN": "@mapbox_access_token"
+        }
+     
+      
+  }
+  
