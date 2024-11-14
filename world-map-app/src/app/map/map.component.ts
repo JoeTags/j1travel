@@ -1,6 +1,8 @@
 import { AfterViewInit, Component, OnInit } from '@angular/core';
 import * as mapboxgl from 'mapbox-gl';
 import { environment } from '../../environments/environment';
+import { AgentService } from '../agent-portal/agent.service';
+import { Agent } from '../interfaces/agent.model';
 @Component({
   selector: 'app-map',
   templateUrl: './map.component.html',
@@ -8,8 +10,14 @@ import { environment } from '../../environments/environment';
 })
 export class MapComponent implements OnInit, AfterViewInit {
   map!: mapboxgl.Map;
+  agents: Agent[] = [];
+  constructor(private agentService: AgentService) {}
 
   ngOnInit(): void {
+    this.agentService.getAgents().subscribe((agents) => {
+      this.agents = agents;
+      this.addAgentMarkers();
+    });
     // Set your Mapbox access token
     (mapboxgl as any).accessToken = environment.mapboxAccessToken;
   }
@@ -94,6 +102,21 @@ export class MapComponent implements OnInit, AfterViewInit {
       } else {
         console.warn('No features found at the clicked location.');
       }
+    });
+  }
+
+  addAgentMarkers(): void {
+    this.agents.forEach((agent) => {
+      const marker = new mapboxgl.Marker()
+        .setLngLat([agent.location.longitude, agent.location.latitude])
+        .setPopup(
+          new mapboxgl.Popup().setHTML(`
+            <h3>${agent.name}</h3>
+            <p>${agent.description}</p>
+            <img src="${agent.photoUrl}" alt="${agent.name}" width="100" />
+          `)
+        )
+        .addTo(this.map);
     });
   }
 }
