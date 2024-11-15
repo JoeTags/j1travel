@@ -1,17 +1,17 @@
-import { NgModule } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
-import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
+import { NgModule } from '@angular/core';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { BrowserModule } from '@angular/platform-browser';
 
-import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
-import { provideFirestore, getFirestore } from '@angular/fire/firestore';
-import { provideStorage, getStorage } from '@angular/fire/storage';
+import { AngularFireModule } from '@angular/fire/compat';
+import { AngularFirestoreModule } from '@angular/fire/compat/firestore';
+import { AngularFireStorageModule } from '@angular/fire/compat/storage';
 
 import { environment } from '../environments/environment';
 
+import { AgentPortalComponent } from './agent-portal/agent-portal.component';
 import { AppComponent } from './app.component';
 import { MapComponent } from './map/map.component';
-import { AgentPortalComponent } from './agent-portal/agent-portal.component';
 
 @NgModule({
   declarations: [AppComponent, MapComponent, AgentPortalComponent],
@@ -20,12 +20,10 @@ import { AgentPortalComponent } from './agent-portal/agent-portal.component';
     ReactiveFormsModule,
     FormsModule,
     HttpClientModule,
-    provideFirebaseApp(() => initializeApp(environment.firebase)), // Initialize Firebase App
-    provideFirestore(() => getFirestore()), // Firestore Provider
-    provideStorage(() => getStorage()), // Storage Provider
+    AngularFireModule.initializeApp(environment.firebase), // Initialize Firebase
+    AngularFirestoreModule, // Firestore Module
+    AngularFireStorageModule, // Storage Module
   ],
   bootstrap: [AppComponent],
 })
 export class AppModule {}
-
-

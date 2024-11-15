@@ -1,32 +1,17 @@
 import { Injectable } from '@angular/core';
-import {
-  addDoc,
-  collection,
-  collectionData,
-  Firestore,
-} from '@angular/fire/firestore';
-
-import { Observable } from 'rxjs';
+import { AngularFirestore } from '@angular/fire/compat/firestore';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AgentService {
-  constructor(private firestore: Firestore) {}
+  constructor(private firestore: AngularFirestore) {}
 
   addAgent(agentData: any) {
-    const agentsRef = collection(this.firestore, 'agents');
-    return addDoc(agentsRef, agentData);
+    return this.firestore.collection('agents').add(agentData);
   }
-  // addAgent(agent: Agent): Observable<any[]> {
-  //   const agentsCollection = collection(this.firestore, 'agents');
-  //   // agentsCollection.addDoc(agent.id);
-  //   // return from(agentRef.set(agent));
-  //   return agentsCollection;
-  // }
 
-  getAgents(): Observable<any[]> {
-    const agentsCollection = collection(this.firestore, 'agents');
-    return collectionData(agentsCollection, { idField: 'id' });
+  getAgents() {
+    return this.firestore.collection('agents').snapshotChanges();
   }
 }

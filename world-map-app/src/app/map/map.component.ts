@@ -15,7 +15,7 @@ export class MapComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.agentService.getAgents().subscribe((agents) => {
-      this.agents = agents;
+      this.agents = []; //agents;
       this.addAgentMarkers();
     });
     // Set your Mapbox access token
