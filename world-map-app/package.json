@@ -26,12 +26,14 @@
     "@stripe/stripe-js": "^4.10.0",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
+    "firebase": "^10.14.1",
     "mapbox-gl": "^3.8.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.10"
   },
   "devDependencies": {
+    "@angular-builders/custom-webpack": "^18.0.0",
     "@angular-devkit/build-angular": "^18.2.11",
     "@angular/cli": "^18.2.11",
     "@angular/compiler-cli": "^18.2.0",
@@ -39,6 +41,7 @@
     "@types/jasmine": "~5.1.0",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^18.18.0",
+    "@types/webgl2": "^0.0.11",
     "dotenv-webpack": "^8.1.0",
     "jasmine-core": "~5.2.0",
     "karma": "~6.4.0",

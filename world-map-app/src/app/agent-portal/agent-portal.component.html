@@ -1,1 +1,175 @@
-<p>agent-portal works!</p>
+<div class="container">
+  <form [formGroup]="agentForm" (ngSubmit)="onSubmit()" novalidate>
+    <h2>Agent Registration</h2>
+
+    <!-- Name -->
+    <div class="form-group">
+      <label for="name">Name</label>
+      <input
+        id="name"
+        type="text"
+        class="form-control"
+        formControlName="name"
+        placeholder="Enter your name"
+      />
+      <small
+        class="text-danger"
+        *ngIf="agentForm.get('name')?.touched && agentForm.get('name')?.invalid"
+      >
+        Name is required.
+      </small>
+    </div>
+
+    <!-- City -->
+    <div class="form-group">
+      <label for="city">City</label>
+      <input
+        id="city"
+        type="text"
+        class="form-control"
+        formControlName="city"
+        placeholder="Enter your city"
+      />
+      <small
+        class="text-danger"
+        *ngIf="agentForm.get('city')?.touched && agentForm.get('city')?.invalid"
+      >
+        City is required.
+      </small>
+    </div>
+
+    <!-- Country -->
+    <div class="form-group">
+      <label for="country">Country</label>
+      <input
+        id="country"
+        type="text"
+        class="form-control"
+        formControlName="country"
+        placeholder="Enter your country"
+      />
+      <small
+        class="text-danger"
+        *ngIf="
+          agentForm.get('country')?.touched && agentForm.get('country')?.invalid
+        "
+      >
+        Country is required.
+      </small>
+    </div>
+
+    <!-- Description -->
+    <div class="form-group">
+      <label for="description">Description</label>
+      <textarea
+        id="description"
+        class="form-control"
+        formControlName="description"
+        rows="4"
+        placeholder="Enter a brief description"
+      ></textarea>
+      <small
+        class="text-danger"
+        *ngIf="
+          agentForm.get('description')?.touched &&
+          agentForm.get('description')?.invalid
+        "
+      >
+        Description is required.
+      </small>
+    </div>
+
+    <!-- Email -->
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input
+        id="email"
+        type="email"
+        class="form-control"
+        formControlName="email"
+        placeholder="Enter your email"
+      />
+      <small
+        class="text-danger"
+        *ngIf="
+          agentForm.get('email')?.touched && agentForm.get('email')?.invalid
+        "
+      >
+        <span *ngIf="agentForm.get('email')?.errors?.['required']"
+          >Email is required.</span
+        >
+        <span *ngIf="agentForm.get('email')?.errors?.['email']"
+          >Enter a valid email address.</span
+        >
+      </small>
+    </div>
+
+    <!-- Membership -->
+    <div class="form-group">
+      <label for="membership">Membership</label>
+      <select id="membership" class="form-control" formControlName="membership">
+        <option value="" disabled>Select Membership</option>
+        <option value="25">$25</option>
+        <option value="50">$50</option>
+        <option value="100">$100</option>
+      </select>
+      <small
+        class="text-danger"
+        *ngIf="
+          agentForm.get('membership')?.touched &&
+          agentForm.get('membership')?.invalid
+        "
+      >
+        Membership is required.
+      </small>
+    </div>
+
+    <!-- Visa Copy -->
+    <div class="form-group">
+      <label for="visaCopy">J1 Visa Copy</label>
+      <input
+        id="visaCopy"
+        type="file"
+        class="form-control-file"
+        (change)="onVisaCopySelected($event)"
+      />
+      <small
+        class="text-danger"
+        *ngIf="
+          agentForm.get('visaCopy')?.touched &&
+          agentForm.get('visaCopy')?.invalid
+        "
+      >
+        Uploading a copy of your J1 visa is required.
+      </small>
+    </div>
+
+    <!-- Photo -->
+    <div class="form-group">
+      <label for="photo">Photo</label>
+      <input
+        id="photo"
+        type="file"
+        class="form-control-file"
+        (change)="onPhotoSelected($event)"
+      />
+      <small
+        class="text-danger"
+        *ngIf="
+          agentForm.get('photo')?.touched && agentForm.get('photo')?.invalid
+        "
+      >
+        Uploading your photo is required.
+      </small>
+    </div>
+
+    <!-- Submit Button -->
+    <button
+      type="submit"
+      class="btn btn-primary"
+      [disabled]="agentForm.invalid"
+    >
+      Submit
+    </button>
+  </form>
+</div>
