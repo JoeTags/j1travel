@@ -3,8 +3,13 @@ import * as mapboxgl from 'mapbox-gl';
 import { environment } from '../../environments/environment';
 import { AgentService } from '../agent-portal/agent.service';
 import { Agent } from '../interfaces/agent.model';
+import { CommonModule } from '@angular/common';
+import { HttpClientModule } from '@angular/common/http';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-map',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, HttpClientModule],
   templateUrl: './map.component.html',
   styleUrls: ['./map.component.scss'],
 })

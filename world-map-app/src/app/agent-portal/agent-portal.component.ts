@@ -1,10 +1,16 @@
-import { HttpClient } from '@angular/common/http';
+import { CommonModule } from '@angular/common';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
-import { AngularFireStorage } from '@angular/fire/compat/storage';
-import { FormGroup, UntypedFormBuilder, Validators } from '@angular/forms';
+import {
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+  UntypedFormBuilder,
+  Validators,
+} from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import {
   catchError,
-  finalize,
   forkJoin,
   map,
   Observable,
@@ -17,6 +23,15 @@ import { Agent } from '../interfaces/agent.model';
 
 @Component({
   selector: 'app-agent-portal',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    HttpClientModule,
+    RouterModule,
+    //AngularFireStorageModule,
+  ],
   templateUrl: './agent-portal.component.html',
   styleUrls: ['./agent-portal.component.scss'],
 })
@@ -28,8 +43,7 @@ export class AgentPortalComponent implements OnInit {
 
   constructor(
     private fb: UntypedFormBuilder,
-    private http: HttpClient,
-    private storage: AngularFireStorage
+    private http: HttpClient // private storage: AngularFireStorage
   ) {
     //todo: replace with FireStorage or DB
     this.agentForm = this.fb.group({
@@ -100,29 +114,31 @@ export class AgentPortalComponent implements OnInit {
   uploadFiles(
     agentId: string
   ): Observable<{ visaUrl: string; photoUrl: string }> {
-    const visaFile = this.agentForm.get('visaCopy')?.value;
-    const photoFile = this.agentForm.get('photo')?.value;
+    // const visaFile = this.agentForm.get('visaCopy')?.value;
+    // const photoFile = this.agentForm.get('photo')?.value;
 
-    const visaFilePath = `visas/${agentId}/${visaFile.name}`;
-    const photoFilePath = `photos/${agentId}/${photoFile.name}`;
+    // const visaFilePath = `visas/${agentId}/${visaFile.name}`;
+    // const photoFilePath = `photos/${agentId}/${photoFile.name}`;
 
-    const visaRef = this.storage.ref(visaFilePath);
-    const photoRef = this.storage.ref(photoFilePath);
+    // const visaRef = this.storage.ref(visaFilePath);
+    // const photoRef = this.storage.ref(photoFilePath);
 
-    const visaUploadTask = this.storage.upload(visaFilePath, visaFile);
-    const photoUploadTask = this.storage.upload(photoFilePath, photoFile);
+    // const visaUploadTask = this.storage.upload(visaFilePath, visaFile);
+    // const photoUploadTask = this.storage.upload(photoFilePath, photoFile);
 
-    const visaUrl$ = visaUploadTask.snapshotChanges().pipe(
-      finalize(() => {}),
-      switchMap(() => visaRef.getDownloadURL())
-    );
+    const visaUrl$ = '';
+    // visaUploadTask.snapshotChanges().pipe(
+    //   finalize(() => {}),
+    //   switchMap(() => visaRef.getDownloadURL())
+    // );
 
-    const photoUrl$ = photoUploadTask.snapshotChanges().pipe(
-      finalize(() => {}),
-      switchMap(() => photoRef.getDownloadURL())
-    );
+    const photoUrl$ = '';
+    // photoUploadTask.snapshotChanges().pipe(
+    //   finalize(() => {}),
+    //   switchMap(() => photoRef.getDownloadURL())
+    // );
 
-    // Wait for both URLs to be available
+    // // Wait for both URLs to be available
     return forkJoin({
       visaUrl: visaUrl$,
       photoUrl: photoUrl$,

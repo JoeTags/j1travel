@@ -1,11 +1,23 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from './authentication/auth-guard';
 import { AgentPortalComponent } from './agent-portal/agent-portal.component';
+import { MapComponent } from './map/map.component';
 
-export const routes: Routes = [
+export const appRoutes: Routes = [
   {
     path: 'agent-portal',
     component: AgentPortalComponent,
-    canActivate: [AuthGuard],
+  },
+  {
+    path: 'map',
+    component: MapComponent,
+  },
+  {
+    path: '',
+    redirectTo: '/agent-portal',
+    pathMatch: 'full',
+  },
+  {
+    path: '**',
+    redirectTo: '/agent-portal',
   },
 ];

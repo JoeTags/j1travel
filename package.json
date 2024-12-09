@@ -8,5 +8,14 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@angular/cli": "^18.2.12",
+    "latest": "^0.2.0",
+    "mapbox-gl": "^2.15.0",
+    "n": "^10.1.0"
+  },
+  "devDependencies": {
+    "@types/mapbox-gl": "^2.6.2"
+  }
 }
