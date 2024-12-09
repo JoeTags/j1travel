@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
+import { collection, doc, Firestore } from '@angular/fire/firestore';
 import {
   FormGroup,
   FormsModule,
@@ -20,6 +21,7 @@ import {
 } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Agent } from '../interfaces/agent.model';
+import { AgentService } from './agent.service';
 
 @Component({
   selector: 'app-agent-portal',
@@ -30,21 +32,32 @@ import { Agent } from '../interfaces/agent.model';
     FormsModule,
     HttpClientModule,
     RouterModule,
-    //AngularFireStorageModule,
   ],
   templateUrl: './agent-portal.component.html',
   styleUrls: ['./agent-portal.component.scss'],
+  // providers: [
+  //   { provide: Firestore, useFactory: () => getFirestore() }, // Explicit Firestore provider
+  //   {
+  //     provide: AgentService,
+  //     useClass: AgentService, // Provide AgentService explicitly
+  //   },
+  //   {
+  //     provide: 'FirebaseApp',
+  //     useFactory: () => initializeApp(environment.firebase), // Firebase Initialization
+  //   },
+  // ],
 })
 export class AgentPortalComponent implements OnInit {
   agentForm: FormGroup;
   paymentService: any;
-  firestore: any;
-  agentService: any;
 
   constructor(
     private fb: UntypedFormBuilder,
-    private http: HttpClient // private storage: AngularFireStorage
+    private http: HttpClient,
+    private agentService: AgentService,
+    private firestore: Firestore
   ) {
+    console.log('Firestore initialized:', firestore);
     //todo: replace with FireStorage or DB
     this.agentForm = this.fb.group({
       name: ['', Validators.required],
@@ -52,9 +65,9 @@ export class AgentPortalComponent implements OnInit {
       country: ['', Validators.required],
       description: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      membership: ['', Validators.required],
-      visaCopy: [null, Validators.required],
-      photo: [null, Validators.required],
+      membership: [''], //Validators.required],
+      visaCopy: [null], //Validators.required],
+      photo: [null], //Validators.required],
     });
   }
 
@@ -62,16 +75,12 @@ export class AgentPortalComponent implements OnInit {
 
   onSubmit() {
     if (this.agentForm.valid) {
-      // Extract form values
-      const membership = this.agentForm.get('membership')?.value;
-      const amount = this.getMembershipAmount(membership);
-      const agentId = this.firestore.createId();
+      // Generate a unique agent ID
+      const agentId = doc(collection(this.firestore, 'agents')).id;
 
       // Begin the Observable chain
-      this.paymentService
-        .checkout(amount)
+      this.uploadFiles(agentId)
         .pipe(
-          switchMap(() => this.uploadFiles(agentId)),
           switchMap(({ visaUrl, photoUrl }) =>
             this.getLocationFromAddress(
               this.agentForm.get('city')?.value,
@@ -85,7 +94,7 @@ export class AgentPortalComponent implements OnInit {
                   country: this.agentForm.get('country')?.value,
                   description: this.agentForm.get('description')?.value,
                   email: this.agentForm.get('email')?.value,
-                  membership,
+                  membership: this.agentForm.get('membership')?.value,
                   visaUrl,
                   photoUrl,
                   location,
@@ -107,9 +116,57 @@ export class AgentPortalComponent implements OnInit {
         .subscribe();
     }
   }
-  getMembershipAmount(membership: any) {
-    throw new Error('Method not implemented.');
-  }
+
+  // onSubmit() {
+  //   if (this.agentForm.valid) {
+  //     // Extract form values
+  //     const membership = this.agentForm.get('membership')?.value;
+  //     const amount = 25; //this.getMembershipAmount(membership);
+  //     const agentId = doc(collection(this.firestore, 'agents')).id;
+
+  //     // Begin the Observable chain
+  //     this.paymentService
+  //       .checkout(amount)
+  //       .pipe(
+  //         switchMap(() => this.uploadFiles(agentId)),
+  //         switchMap(({ visaUrl, photoUrl }) =>
+  //           this.getLocationFromAddress(
+  //             this.agentForm.get('city')?.value,
+  //             this.agentForm.get('country')?.value
+  //           ).pipe(
+  //             map((location) => ({
+  //               agentData: {
+  //                 id: agentId,
+  //                 name: this.agentForm.get('name')?.value,
+  //                 city: this.agentForm.get('city')?.value,
+  //                 country: this.agentForm.get('country')?.value,
+  //                 description: this.agentForm.get('description')?.value,
+  //                 email: this.agentForm.get('email')?.value,
+  //                 membership,
+  //                 visaUrl,
+  //                 photoUrl,
+  //                 location,
+  //               } as Agent,
+  //             }))
+  //           )
+  //         ),
+  //         switchMap(({ agentData }) => this.agentService.addAgent(agentData)),
+  //         tap(() => {
+  //           // Handle success (e.g., show a success message)
+  //           console.log('Agent added successfully');
+  //         }),
+  //         catchError((error) => {
+  //           // Handle errors here
+  //           console.error('Error occurred:', error);
+  //           return of(); // Return an empty observable to complete the chain
+  //         })
+  //       )
+  //       .subscribe();
+  //   }
+  // }
+  // getMembershipAmount(membership: any) {
+  //   throw new Error('Method not implemented.');
+  // }
 
   uploadFiles(
     agentId: string
@@ -126,13 +183,13 @@ export class AgentPortalComponent implements OnInit {
     // const visaUploadTask = this.storage.upload(visaFilePath, visaFile);
     // const photoUploadTask = this.storage.upload(photoFilePath, photoFile);
 
-    const visaUrl$ = '';
+    const visaUrl$ = 'visa';
     // visaUploadTask.snapshotChanges().pipe(
     //   finalize(() => {}),
     //   switchMap(() => visaRef.getDownloadURL())
     // );
 
-    const photoUrl$ = '';
+    const photoUrl$ = 'photo';
     // photoUploadTask.snapshotChanges().pipe(
     //   finalize(() => {}),
     //   switchMap(() => photoRef.getDownloadURL())
@@ -158,6 +215,7 @@ export class AgentPortalComponent implements OnInit {
     return this.http.get<any>(url).pipe(
       map((res) => {
         const [longitude, latitude] = res.features[0].center;
+        console.log('lat:', latitude, 'long:', longitude);
         return { latitude, longitude };
       })
     );
