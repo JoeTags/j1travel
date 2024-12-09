@@ -30,6 +30,7 @@ export class AgentService {
    */
   getAgents(): Observable<any[]> {
     const agentCollection = collection(this.firestore, 'agents');
+    console.log('agentCollection:', agentCollection);
     return collectionData(agentCollection, { idField: 'id' }); // `idField` includes the Firestore document ID
   }
 }
