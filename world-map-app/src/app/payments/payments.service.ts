@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
 export class PaymentService {
   constructor(private http: HttpClient) {}
 
-  checkout(amount: number): Observable<any> {
+  checkout(amount: number): Observable<Object> {
     // Replace with your actual payment processing endpoint
     return this.http.post('/api/process-payment', { amount });
   }

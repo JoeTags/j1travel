@@ -21,6 +21,7 @@ import {
 } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Agent } from '../interfaces/agent.model';
+import { PaymentService } from '../payments/payments.service';
 import { AgentService } from './agent.service';
 
 @Component({
@@ -35,26 +36,15 @@ import { AgentService } from './agent.service';
   ],
   templateUrl: './agent-portal.component.html',
   styleUrls: ['./agent-portal.component.scss'],
-  // providers: [
-  //   { provide: Firestore, useFactory: () => getFirestore() }, // Explicit Firestore provider
-  //   {
-  //     provide: AgentService,
-  //     useClass: AgentService, // Provide AgentService explicitly
-  //   },
-  //   {
-  //     provide: 'FirebaseApp',
-  //     useFactory: () => initializeApp(environment.firebase), // Firebase Initialization
-  //   },
-  // ],
 })
 export class AgentPortalComponent implements OnInit {
   agentForm: FormGroup;
-  paymentService: any;
 
   constructor(
     private fb: UntypedFormBuilder,
     private http: HttpClient,
     private agentService: AgentService,
+    private paymentService: PaymentService,
     private firestore: Firestore
   ) {
     console.log('Firestore initialized:', firestore);
@@ -73,62 +63,14 @@ export class AgentPortalComponent implements OnInit {
 
   ngOnInit(): void {}
 
-  onSubmit() {
-    if (this.agentForm.valid) {
-      // Generate a unique agent ID
-      const agentId = doc(collection(this.firestore, 'agents')).id;
-
-      // Begin the Observable chain
-      this.uploadFiles(agentId)
-        .pipe(
-          switchMap(({ visaUrl, photoUrl }) =>
-            this.getLocationFromAddress(
-              this.agentForm.get('city')?.value,
-              this.agentForm.get('country')?.value
-            ).pipe(
-              map((location) => ({
-                agentData: {
-                  id: agentId,
-                  name: this.agentForm.get('name')?.value,
-                  city: this.agentForm.get('city')?.value,
-                  country: this.agentForm.get('country')?.value,
-                  description: this.agentForm.get('description')?.value,
-                  email: this.agentForm.get('email')?.value,
-                  membership: this.agentForm.get('membership')?.value,
-                  visaUrl,
-                  photoUrl,
-                  location,
-                } as Agent,
-              }))
-            )
-          ),
-          switchMap(({ agentData }) => this.agentService.addAgent(agentData)),
-          tap(() => {
-            // Handle success (e.g., show a success message)
-            console.log('Agent added successfully');
-          }),
-          catchError((error) => {
-            // Handle errors here
-            console.error('Error occurred:', error);
-            return of(); // Return an empty observable to complete the chain
-          })
-        )
-        .subscribe();
-    }
-  }
-
   // onSubmit() {
   //   if (this.agentForm.valid) {
-  //     // Extract form values
-  //     const membership = this.agentForm.get('membership')?.value;
-  //     const amount = 25; //this.getMembershipAmount(membership);
+  //     // Generate a unique agent ID
   //     const agentId = doc(collection(this.firestore, 'agents')).id;
 
   //     // Begin the Observable chain
-  //     this.paymentService
-  //       .checkout(amount)
+  //     this.uploadFiles(agentId)
   //       .pipe(
-  //         switchMap(() => this.uploadFiles(agentId)),
   //         switchMap(({ visaUrl, photoUrl }) =>
   //           this.getLocationFromAddress(
   //             this.agentForm.get('city')?.value,
@@ -142,7 +84,7 @@ export class AgentPortalComponent implements OnInit {
   //                 country: this.agentForm.get('country')?.value,
   //                 description: this.agentForm.get('description')?.value,
   //                 email: this.agentForm.get('email')?.value,
-  //                 membership,
+  //                 membership: this.agentForm.get('membership')?.value,
   //                 visaUrl,
   //                 photoUrl,
   //                 location,
@@ -164,9 +106,57 @@ export class AgentPortalComponent implements OnInit {
   //       .subscribe();
   //   }
   // }
-  // getMembershipAmount(membership: any) {
-  //   throw new Error('Method not implemented.');
-  // }
+
+  onSubmit() {
+    if (this.agentForm.valid) {
+      // Extract form values
+      const membership = this.agentForm.get('membership')?.value;
+      const amount = this.getMembershipAmount(membership);
+      const agentId = doc(collection(this.firestore, 'agents')).id;
+
+      // Begin the Observable chain
+      this.paymentService
+        .checkout(amount)
+        .pipe(
+          switchMap(() => this.uploadFiles(agentId)),
+          switchMap(({ visaUrl, photoUrl }) =>
+            this.getLocationFromAddress(
+              this.agentForm.get('city')?.value,
+              this.agentForm.get('country')?.value
+            ).pipe(
+              map((location) => ({
+                agentData: {
+                  id: agentId,
+                  name: this.agentForm.get('name')?.value,
+                  city: this.agentForm.get('city')?.value,
+                  country: this.agentForm.get('country')?.value,
+                  description: this.agentForm.get('description')?.value,
+                  email: this.agentForm.get('email')?.value,
+                  membership,
+                  visaUrl,
+                  photoUrl,
+                  location,
+                } as Agent,
+              }))
+            )
+          ),
+          switchMap(({ agentData }) => this.agentService.addAgent(agentData)),
+          tap(() => {
+            // Handle success (e.g., show a success message)
+            console.log('Agent added successfully');
+          }),
+          catchError((error) => {
+            // Handle errors here
+            console.error('Error occurred:', error);
+            return of(); // Return an empty observable to complete the chain
+          })
+        )
+        .subscribe();
+    }
+  }
+  getMembershipAmount(membership: any) {
+    return membership;
+  }
 
   uploadFiles(
     agentId: string
