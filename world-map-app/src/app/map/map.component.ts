@@ -4,7 +4,7 @@ import { AfterViewInit, Component, OnInit } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import * as mapboxgl from 'mapbox-gl';
-import { environment } from '../../environments/environment';
+import { environment } from '../../environments/environments';
 import { AgentService } from '../agent-portal/agent.service';
 import { Agent } from '../interfaces/agent.model';
 @Component({

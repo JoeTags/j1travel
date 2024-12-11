@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
-import { environment } from '../environments/environment';
 import { RouterModule } from '@angular/router';
+import { environment } from '../environments/environments';
 
 @Component({
   selector: 'app-root',

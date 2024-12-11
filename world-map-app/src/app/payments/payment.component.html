@@ -1,0 +1,14 @@
+<form [formGroup]="paymentForm" (ngSubmit)="pay()">
+  <label>
+    Cardholder Name
+    <input formControlName="name" placeholder="Jane Doe" />
+  </label>
+
+  <!-- Stripe Card Element -->
+  <ngx-stripe-card
+    [options]="cardOptions"
+    [elementsOptions]="elementsOptions"
+  ></ngx-stripe-card>
+
+  <button type="submit" [disabled]="paymentForm.invalid">Pay</button>
+</form>

@@ -19,7 +19,7 @@ import {
   switchMap,
   tap,
 } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { environment } from '../../environments/environments';
 import { Agent } from '../interfaces/agent.model';
 import { PaymentService } from '../payments/payments.service';
 import { AgentService } from './agent.service';
@@ -31,7 +31,8 @@ import { AgentService } from './agent.service';
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
-    HttpClientModule,
+  
+    //HttpClientModule,
     RouterModule,
   ],
   templateUrl: './agent-portal.component.html',
