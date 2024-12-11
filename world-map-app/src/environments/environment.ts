@@ -1,3 +1,4 @@
+require('dotenv').config();
 export const environment = {
   production: false,
   mapboxAccessToken:
@@ -13,4 +14,6 @@ export const environment = {
     measurementId: 'G-LCTFMGJN1C',
   },
   key: 'AIzaSyB4cyyCB1CHCjPkNTxFQVG3wgf5aF9WQP8',
+  stripe: process.env['STRIPE_SECRET'],
+  publishable: process.env['STRIPE_PUBLISHABLE'],
 };
