@@ -1,14 +1,16 @@
-import { AfterViewInit, Component, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   StripeCardElementOptions,
   StripeElementsOptions,
 } from '@stripe/stripe-js';
+
 import { StripeCardComponent, StripeService } from 'ngx-stripe';
 import { CommonUtils } from '../utils/common-utils';
 import { PaymentService } from './payments.service';
@@ -20,8 +22,9 @@ import { PaymentService } from './payments.service';
   styleUrls: ['./payment.component.scss'],
   imports: [ReactiveFormsModule, StripeCardComponent],
 })
-export class PaymentComponent implements AfterViewInit {
+export class PaymentComponent implements OnInit, AfterViewInit {
   // test card: 4242 4242 4242 4242
+  amount: number = 0;
   paymentForm: FormGroup;
   @ViewChild(StripeCardComponent)
   card!: StripeCardComponent;
@@ -46,11 +49,20 @@ export class PaymentComponent implements AfterViewInit {
   constructor(
     private fb: FormBuilder,
     private stripeService: StripeService,
-    private paymentService: PaymentService
+    private paymentService: PaymentService,
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.paymentForm = this.fb.group({
       name: ['', [Validators.required]],
       // email: ['', [Validators.required, Validators.email]],
+    });
+  }
+
+  ngOnInit(): void {
+    // Get the amount from the query parameters
+    this.route.queryParams.subscribe((params) => {
+      this.amount = +params['amount'];
     });
   }
 
@@ -79,6 +91,9 @@ export class PaymentComponent implements AfterViewInit {
                   console.error('Payment failed:', result.error.message);
                 } else if (result.paymentIntent.status === 'succeeded') {
                   console.log('Payment succeeded!');
+                  this.router.navigate(['/agent-portal'], {
+                    queryParams: { paymentSuccess: true },
+                  });
                 }
               });
           });

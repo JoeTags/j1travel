@@ -1,7 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { collection, doc, Firestore } from '@angular/fire/firestore';
+import {
+  getDownloadURL,
+  ref,
+  Storage,
+  uploadBytesResumable,
+} from '@angular/fire/storage';
 import {
   FormGroup,
   FormsModule,
@@ -9,7 +15,7 @@ import {
   UntypedFormBuilder,
   Validators,
 } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Route, Router, RouterModule } from '@angular/router';
 import {
   catchError,
   forkJoin,
@@ -24,6 +30,7 @@ import { Agent } from '../interfaces/agent.model';
 import { PaymentService } from '../payments/payments.service';
 import { AgentService } from './agent.service';
 
+
 @Component({
   selector: 'app-agent-portal',
   standalone: true,
@@ -31,7 +38,7 @@ import { AgentService } from './agent.service';
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
-  
+
     //HttpClientModule,
     RouterModule,
   ],
@@ -46,7 +53,9 @@ export class AgentPortalComponent implements OnInit {
     private http: HttpClient,
     private agentService: AgentService,
     private paymentService: PaymentService,
-    private firestore: Firestore
+    private firestore: Firestore,
+    private storage: Storage,
+    private router: Router
   ) {
     console.log('Firestore initialized:', firestore);
     //todo: replace with FireStorage or DB
@@ -56,9 +65,9 @@ export class AgentPortalComponent implements OnInit {
       country: ['', Validators.required],
       description: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      membership: [''], //Validators.required],
-      visaCopy: [null], //Validators.required],
-      photo: [null], //Validators.required],
+      membership: ['', Validators.required],
+      visaCopy: [null, Validators.required],
+      photo: [null, Validators.required],
     });
   }
 
@@ -113,6 +122,7 @@ export class AgentPortalComponent implements OnInit {
       // Extract form values
       const membership = this.agentForm.get('membership')?.value;
       const amount = this.getMembershipAmount(membership);
+      this.router.navigate(['/payment'], { queryParams: { amount } });
       const agentId = doc(collection(this.firestore, 'agents')).id;
 
       // Begin the Observable chain
@@ -134,8 +144,8 @@ export class AgentPortalComponent implements OnInit {
                   description: this.agentForm.get('description')?.value,
                   email: this.agentForm.get('email')?.value,
                   membership,
-                  visaUrl,
-                  photoUrl,
+                  visaUrl: this.agentForm.get('visaCopy')?.value,
+                  photoUrl: this.agentForm.get('photo')?.value,
                   location,
                 } as Agent,
               }))
@@ -155,38 +165,66 @@ export class AgentPortalComponent implements OnInit {
         .subscribe();
     }
   }
-  getMembershipAmount(membership: any) {
-    return membership;
+  getMembershipAmount(membership: string): number {
+    switch (membership) {
+      case '25':
+        return 25; // Example amount for "basic" membership
+      case '50':
+        return 50; // Example amount for "premium" membership
+      case '75':
+        return 75;
+      default:
+        return 0;
+    }
   }
 
   uploadFiles(
     agentId: string
   ): Observable<{ visaUrl: string; photoUrl: string }> {
-    // const visaFile = this.agentForm.get('visaCopy')?.value;
-    // const photoFile = this.agentForm.get('photo')?.value;
+    const visaFile = this.agentForm.get('visaCopy')?.value;
+    const photoFile = this.agentForm.get('photo')?.value;
 
-    // const visaFilePath = `visas/${agentId}/${visaFile.name}`;
-    // const photoFilePath = `photos/${agentId}/${photoFile.name}`;
+    const visaFilePath = `visas/${agentId}/${visaFile.name}`;
+    const photoFilePath = `photos/${agentId}/${photoFile.name}`;
 
-    // const visaRef = this.storage.ref(visaFilePath);
-    // const photoRef = this.storage.ref(photoFilePath);
+    // Create storage references
+    const visaRef = ref(this.storage, visaFilePath);
+    const photoRef = ref(this.storage, photoFilePath);
 
-    // const visaUploadTask = this.storage.upload(visaFilePath, visaFile);
-    // const photoUploadTask = this.storage.upload(photoFilePath, photoFile);
+    // Upload files
+    const visaUploadTask = uploadBytesResumable(visaRef, visaFile);
+    const photoUploadTask = uploadBytesResumable(photoRef, photoFile);
 
-    const visaUrl$ = 'visa';
-    // visaUploadTask.snapshotChanges().pipe(
-    //   finalize(() => {}),
-    //   switchMap(() => visaRef.getDownloadURL())
-    // );
+    // Monitor upload progress and get URLs
 
-    const photoUrl$ = 'photo';
-    // photoUploadTask.snapshotChanges().pipe(
-    //   finalize(() => {}),
-    //   switchMap(() => photoRef.getDownloadURL())
-    // );
+    const visaUrl$ = new Observable<string>((observer) => {
+      visaUploadTask.on(
+        'state_changed',
+        null,
+        (error) => observer.error(error),
+        () => {
+          getDownloadURL(visaRef).then((url) => {
+            observer.next(url);
+            observer.complete();
+          });
+        }
+      );
+    });
 
-    // // Wait for both URLs to be available
+    const photoUrl$ = new Observable<string>((observer) => {
+      photoUploadTask.on(
+        'state_changed',
+        null,
+        (error) => observer.error(error),
+        () => {
+          getDownloadURL(photoRef).then((url) => {
+            observer.next(url);
+            observer.complete();
+          });
+        }
+      );
+    });
+    // Wait for both URLs to be available
     return forkJoin({
       visaUrl: visaUrl$,
       photoUrl: photoUrl$,
