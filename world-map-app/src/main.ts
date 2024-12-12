@@ -6,6 +6,7 @@
 //   .catch((err) => console.error(err));
 
 import { HttpClientModule } from '@angular/common/http';
+import { importProvidersFrom } from '@angular/core';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
 import { getStorage, provideStorage } from '@angular/fire/storage';
@@ -15,7 +16,6 @@ import { provideNgxStripe } from 'ngx-stripe';
 import { AppComponent } from './app/app.component';
 import { appRoutes } from './app/app.routes';
 import { environment } from './environments/environments';
-import { importProvidersFrom } from '@angular/core';
 
 bootstrapApplication(AppComponent, {
   providers: [
@@ -24,6 +24,6 @@ bootstrapApplication(AppComponent, {
     provideFirebaseApp(() => initializeApp(environment.firebase)), // Firebase initialization
     provideFirestore(() => getFirestore()), // Firestore service
     provideStorage(() => getStorage()), // Storage service
-    provideNgxStripe(environment.publishable),
+    provideNgxStripe(environment.testStripePublishable),
   ],
 }).catch((err) => console.error(err));
