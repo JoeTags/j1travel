@@ -15,7 +15,7 @@ import {
   UntypedFormBuilder,
   Validators,
 } from '@angular/forms';
-import { Route, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import {
   catchError,
   forkJoin,
@@ -29,7 +29,6 @@ import { environment } from '../../environments/environments';
 import { Agent } from '../interfaces/agent.model';
 import { PaymentService } from '../payments/payments.service';
 import { AgentService } from './agent.service';
-
 
 @Component({
   selector: 'app-agent-portal',
@@ -47,6 +46,7 @@ import { AgentService } from './agent.service';
 })
 export class AgentPortalComponent implements OnInit {
   agentForm: FormGroup;
+  paymentSuccess: boolean = false;
 
   constructor(
     private fb: UntypedFormBuilder,
@@ -55,7 +55,8 @@ export class AgentPortalComponent implements OnInit {
     private paymentService: PaymentService,
     private firestore: Firestore,
     private storage: Storage,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     console.log('Firestore initialized:', firestore);
     //todo: replace with FireStorage or DB
@@ -71,7 +72,14 @@ export class AgentPortalComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.route.queryParams.subscribe((params) => {
+      this.paymentSuccess = params['paymentSuccess'] === 'true';
+      if (this.paymentSuccess) {
+        console.log('Payment was successful. Continue registration.');
+      }
+    });
+  }
 
   // onSubmit() {
   //   if (this.agentForm.valid) {
@@ -118,7 +126,7 @@ export class AgentPortalComponent implements OnInit {
   // }
 
   onSubmit() {
-    if (this.agentForm.valid) {
+    if (this.agentForm.valid && this.paymentSuccess) {
       // Extract form values
       const membership = this.agentForm.get('membership')?.value;
       const amount = this.getMembershipAmount(membership);
