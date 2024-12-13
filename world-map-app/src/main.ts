@@ -1,10 +1,3 @@
-// import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
-// import { AppModule } from './app/app.module';
-
-// platformBrowserDynamic()
-//   .bootstrapModule(AppModule)
-//   .catch((err) => console.error(err));
-
 import { HttpClientModule } from '@angular/common/http';
 import { importProvidersFrom } from '@angular/core';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';

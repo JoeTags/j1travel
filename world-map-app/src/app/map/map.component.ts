@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { AfterViewInit, Component, OnInit } from '@angular/core';
+import { getAuth, signInAnonymously } from '@angular/fire/auth';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import * as mapboxgl from 'mapbox-gl';
+import { catchError, from, Observable, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environments';
 import { AgentService } from '../agent-portal/agent.service';
 import { Agent } from '../interfaces/agent.model';
@@ -20,14 +22,28 @@ export class MapComponent implements OnInit, AfterViewInit {
   constructor(private router: Router, private agentService: AgentService) {} //private agentService: AgentService
 
   ngOnInit(): void {
-    this.agentService.getAgents().subscribe((agents) => {
-      this.agents = agents;
-      console.log('agent:', this.agents);
-      this.addAgentMarkers();
-    });
-
-    // Set your Mapbox access token
     (mapboxgl as any).accessToken = environment.mapboxAccessToken;
+    this.authenticateUser().pipe(
+      tap(() => {
+        // Set the Mapbox access token after authentication
+        (mapboxgl as any).accessToken = environment.mapboxAccessToken;
+      }),
+      switchMap(() => {
+        // Load agents only if authenticated
+        console.log("get agents:", )
+        return this.agentService.getAgents();
+      }),
+      tap((agents) => {
+        this.agents = agents;
+        console.log('Agents loaded:', this.agents);
+        this.addAgentMarkers();
+      }),
+      catchError((error) => {
+        console.error('Error during initialization:', error);
+        return of();
+      })
+    );
+    this.addAgentMarkers();
   }
 
   ngAfterViewInit(): void {
@@ -41,6 +57,33 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.map.on('load', () => {
       this.addCountryLayers();
       this.addMapInteractivity();
+    });
+  }
+
+  private authenticateUser(): Observable<void> {
+    const auth = getAuth();
+
+    return new Observable<void>((observer) => {
+      if (!auth.currentUser) {
+        from(signInAnonymously(auth))
+          .pipe(
+            tap(() => {
+              console.log('User signed in anonymously:', auth.currentUser?.uid);
+            }),
+            catchError((error) => {
+              console.error('Authentication error:', error);
+              return of();
+            })
+          )
+          .subscribe(
+            () => observer.next(),
+            () => observer.complete()
+          );
+      } else {
+        console.log('User already authenticated:', auth.currentUser?.uid);
+        observer.next();
+        observer.complete();
+      }
     });
   }
 

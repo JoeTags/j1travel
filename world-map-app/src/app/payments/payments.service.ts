@@ -22,6 +22,7 @@ export class PaymentService {
    * @returns An Observable that emits the client secret from the PaymentIntent.
    */
   createPaymentIntent(amount: number): Observable<{ clientSecret: string }> {
+    console.log('amount:', amount);
     return this.http.post<{ clientSecret: string }>(
       `${this.backendUrl}/create-payment-intent`,
       { amount }

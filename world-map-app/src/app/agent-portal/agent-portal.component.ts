@@ -1,13 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
-import { collection, doc, Firestore } from '@angular/fire/firestore';
 import {
-  getDownloadURL,
-  ref,
-  Storage,
-  uploadBytesResumable,
-} from '@angular/fire/storage';
+  getAuth,
+  onAuthStateChanged,
+  signInAnonymously,
+} from '@angular/fire/auth';
+import {
+  collection,
+  doc,
+  Firestore,
+  getDoc,
+  setDoc,
+} from '@angular/fire/firestore';
+import { Storage } from '@angular/fire/storage';
+
 import {
   FormGroup,
   FormsModule,
@@ -19,6 +26,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import {
   catchError,
   forkJoin,
+  from,
   map,
   Observable,
   of,
@@ -29,37 +37,33 @@ import { environment } from '../../environments/environments';
 import { Agent } from '../interfaces/agent.model';
 import { PaymentService } from '../payments/payments.service';
 import { AgentService } from './agent.service';
+import { FileUploadService } from './file-upload.service';
 
 @Component({
   selector: 'app-agent-portal',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    FormsModule,
-
-    //HttpClientModule,
-    RouterModule,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule],
   templateUrl: './agent-portal.component.html',
   styleUrls: ['./agent-portal.component.scss'],
 })
 export class AgentPortalComponent implements OnInit {
   agentForm: FormGroup;
+  agentId: string = '';
   paymentSuccess: boolean = false;
+  user: any = null;
 
   constructor(
     private fb: UntypedFormBuilder,
     private http: HttpClient,
-    private agentService: AgentService,
-    private paymentService: PaymentService,
+    private router: Router,
+    private route: ActivatedRoute,
     private firestore: Firestore,
     private storage: Storage,
-    private router: Router,
-    private route: ActivatedRoute
+    private paymentService: PaymentService,
+    private agentService: AgentService,
+    private fileUploadService: FileUploadService
   ) {
     console.log('Firestore initialized:', firestore);
-    //todo: replace with FireStorage or DB
     this.agentForm = this.fb.group({
       name: ['', Validators.required],
       city: ['', Validators.required],
@@ -67,77 +71,141 @@ export class AgentPortalComponent implements OnInit {
       description: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       membership: ['', Validators.required],
-      visaCopy: [null, Validators.required],
-      photo: [null, Validators.required],
+      visaCopy: [null],
+      photo: [null],
     });
   }
 
   ngOnInit(): void {
+    this.checkAuthentication();
     this.route.queryParams.subscribe((params) => {
       this.paymentSuccess = params['paymentSuccess'] === 'true';
+      const agentId = params['agentId'];
+      if (agentId) {
+        this.agentId = agentId;
+        this.loadDraft(agentId);
+      }
       if (this.paymentSuccess) {
-        console.log('Payment was successful. Continue registration.');
+        this.continueAgentCreation();
+      }
+    });
+  }
+  private checkAuthentication(): void {
+    const auth = getAuth();
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('User authenticated:', user.uid);
+        this.user = user;
+      } else {
+        console.log('No user authenticated. Signing in anonymously...');
+        signInAnonymously(auth).then((cred) => {
+          console.log('Anonymous sign-in successful:', cred.user.uid);
+          this.user = cred.user;
+        });
       }
     });
   }
 
-  // onSubmit() {
-  //   if (this.agentForm.valid) {
-  //     // Generate a unique agent ID
-  //     const agentId = doc(collection(this.firestore, 'agents')).id;
-
-  //     // Begin the Observable chain
-  //     this.uploadFiles(agentId)
-  //       .pipe(
-  //         switchMap(({ visaUrl, photoUrl }) =>
-  //           this.getLocationFromAddress(
-  //             this.agentForm.get('city')?.value,
-  //             this.agentForm.get('country')?.value
-  //           ).pipe(
-  //             map((location) => ({
-  //               agentData: {
-  //                 id: agentId,
-  //                 name: this.agentForm.get('name')?.value,
-  //                 city: this.agentForm.get('city')?.value,
-  //                 country: this.agentForm.get('country')?.value,
-  //                 description: this.agentForm.get('description')?.value,
-  //                 email: this.agentForm.get('email')?.value,
-  //                 membership: this.agentForm.get('membership')?.value,
-  //                 visaUrl,
-  //                 photoUrl,
-  //                 location,
-  //               } as Agent,
-  //             }))
-  //           )
-  //         ),
-  //         switchMap(({ agentData }) => this.agentService.addAgent(agentData)),
-  //         tap(() => {
-  //           // Handle success (e.g., show a success message)
-  //           console.log('Agent added successfully');
-  //         }),
-  //         catchError((error) => {
-  //           // Handle errors here
-  //           console.error('Error occurred:', error);
-  //           return of(); // Return an empty observable to complete the chain
-  //         })
-  //       )
-  //       .subscribe();
-  //   }
-  // }
-
-  onSubmit() {
-    if (this.agentForm.valid && this.paymentSuccess) {
-      // Extract form values
+  onSubmit(): void {
+    if (this.agentForm.valid) {
+      // Extract membership to calculate the payment amount
       const membership = this.agentForm.get('membership')?.value;
       const amount = this.getMembershipAmount(membership);
-      this.router.navigate(['/payment'], { queryParams: { amount } });
-      const agentId = doc(collection(this.firestore, 'agents')).id;
 
-      // Begin the Observable chain
-      this.paymentService
-        .checkout(amount)
+      // Save draft and navigate to payment
+      this.saveDraft();
+      this.router.navigate(['/payment'], {
+        queryParams: { amount, agentId: this.agentId },
+      });
+    }
+  }
+
+  /**
+   * Helper method to determine payment amount based on membership type.
+   */
+  private getMembershipAmount(membership: string): number {
+    switch (membership) {
+      case '25':
+        console.log('case 25', membership);
+        return 2500;
+      case '50':
+        return 5000;
+      case '100':
+        return 10000;
+      default:
+        return 0;
+    }
+  }
+
+  private loadDraft(agentId: string): void {
+    getDoc(doc(this.firestore, 'agents', agentId)).then((docSnap) => {
+      if (docSnap.exists()) {
+        this.agentForm.patchValue(docSnap.data());
+      }
+    });
+  }
+
+  saveDraft(): void {
+    if (!this.user) {
+      console.error('User not authenticated. Cannot save draft.');
+      return;
+    }
+
+    if (this.agentForm.valid) {
+      const agentId =
+        this.agentId || doc(collection(this.firestore, 'agents')).id;
+      this.agentId = agentId;
+
+      const visaFile = this.agentForm.get('visaCopy')?.value;
+      const photoFile = this.agentForm.get('photo')?.value;
+
+      const uploadVisa$ = visaFile
+        ? this.fileUploadService.uploadFile(
+            `visas/${agentId}/${visaFile.name}`,
+            visaFile
+          )
+        : of(null);
+
+      const uploadPhoto$ = photoFile
+        ? this.fileUploadService.uploadFile(
+            `photos/${agentId}/${photoFile.name}`,
+            photoFile
+          )
+        : of(null);
+
+      forkJoin({ visaUrl: uploadVisa$, photoUrl: uploadPhoto$ })
         .pipe(
-          switchMap(() => this.uploadFiles(agentId)),
+          switchMap(({ visaUrl, photoUrl }) => {
+            const formData = {
+              ...this.agentForm.value,
+              visaCopy: visaUrl || null,
+              photo: photoUrl || null,
+              status: 'draft',
+            };
+            return from(
+              setDoc(doc(this.firestore, 'agents', agentId), formData, {
+                merge: true,
+              })
+            );
+          })
+        )
+        .subscribe({
+          next: () => console.log('Draft saved successfully'),
+          error: (err) => console.error('Error saving draft:', err),
+        });
+    }
+  }
+
+  continueAgentCreation(): void {
+    if (!this.user) { // todo: fix this bug
+      console.error('User not authenticated. Cannot create agent.');
+      return;
+    }
+
+    if (this.agentForm.valid) {
+      const agentId = this.agentId;
+      this.uploadFiles(agentId)
+        .pipe(
           switchMap(({ visaUrl, photoUrl }) =>
             this.getLocationFromAddress(
               this.agentForm.get('city')?.value,
@@ -145,125 +213,76 @@ export class AgentPortalComponent implements OnInit {
             ).pipe(
               map((location) => ({
                 agentData: {
+                  ...this.agentForm.value,
                   id: agentId,
-                  name: this.agentForm.get('name')?.value,
-                  city: this.agentForm.get('city')?.value,
-                  country: this.agentForm.get('country')?.value,
-                  description: this.agentForm.get('description')?.value,
-                  email: this.agentForm.get('email')?.value,
-                  membership,
-                  visaUrl: this.agentForm.get('visaCopy')?.value,
-                  photoUrl: this.agentForm.get('photo')?.value,
+                  visaUrl,
+                  photoUrl,
                   location,
                 } as Agent,
               }))
             )
           ),
           switchMap(({ agentData }) => this.agentService.addAgent(agentData)),
-          tap(() => {
-            // Handle success (e.g., show a success message)
-            console.log('Agent added successfully');
-          }),
+          tap(() => console.log('Agent created successfully')),
           catchError((error) => {
-            // Handle errors here
             console.error('Error occurred:', error);
-            return of(); // Return an empty observable to complete the chain
+            return of();
           })
         )
         .subscribe();
     }
   }
-  getMembershipAmount(membership: string): number {
-    switch (membership) {
-      case '25':
-        return 25; // Example amount for "basic" membership
-      case '50':
-        return 50; // Example amount for "premium" membership
-      case '75':
-        return 75;
-      default:
-        return 0;
-    }
-  }
 
-  uploadFiles(
+  private uploadFiles(
     agentId: string
-  ): Observable<{ visaUrl: string; photoUrl: string }> {
+  ): Observable<{ visaUrl: string | null; photoUrl: string | null }> {
     const visaFile = this.agentForm.get('visaCopy')?.value;
     const photoFile = this.agentForm.get('photo')?.value;
 
-    const visaFilePath = `visas/${agentId}/${visaFile.name}`;
-    const photoFilePath = `photos/${agentId}/${photoFile.name}`;
+    const uploadVisa$ = visaFile
+      ? this.fileUploadService.uploadFile(
+          `visas/${agentId}/${visaFile.name}`,
+          visaFile
+        )
+      : of(null);
 
-    // Create storage references
-    const visaRef = ref(this.storage, visaFilePath);
-    const photoRef = ref(this.storage, photoFilePath);
+    const uploadPhoto$ = photoFile
+      ? this.fileUploadService.uploadFile(
+          `photos/${agentId}/${photoFile.name}`,
+          photoFile
+        )
+      : of(null);
 
-    // Upload files
-    const visaUploadTask = uploadBytesResumable(visaRef, visaFile);
-    const photoUploadTask = uploadBytesResumable(photoRef, photoFile);
-
-    // Monitor upload progress and get URLs
-
-    const visaUrl$ = new Observable<string>((observer) => {
-      visaUploadTask.on(
-        'state_changed',
-        null,
-        (error) => observer.error(error),
-        () => {
-          getDownloadURL(visaRef).then((url) => {
-            observer.next(url);
-            observer.complete();
-          });
-        }
-      );
-    });
-
-    const photoUrl$ = new Observable<string>((observer) => {
-      photoUploadTask.on(
-        'state_changed',
-        null,
-        (error) => observer.error(error),
-        () => {
-          getDownloadURL(photoRef).then((url) => {
-            observer.next(url);
-            observer.complete();
-          });
-        }
-      );
-    });
-    // Wait for both URLs to be available
-    return forkJoin({
-      visaUrl: visaUrl$,
-      photoUrl: photoUrl$,
-    });
+    return forkJoin({ visaUrl: uploadVisa$, photoUrl: uploadPhoto$ });
   }
 
-  getLocationFromAddress(
+  private getLocationFromAddress(
     city: string,
     country: string
   ): Observable<{ latitude: number; longitude: number }> {
     const address = `${city}, ${country}`;
-    const accessToken = environment.mapboxAccessToken;
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
       address
-    )}.json?access_token=${accessToken}`;
+    )}.json?access_token=${environment.mapboxAccessToken}`;
 
     return this.http.get<any>(url).pipe(
       map((res) => {
         const [longitude, latitude] = res.features[0].center;
-        console.log('lat:', latitude, 'long:', longitude);
         return { latitude, longitude };
+      }),
+      catchError((error) => {
+        console.error('Error fetching location:', error);
+        return of({ latitude: 0, longitude: 0 });
       })
     );
   }
 
-  onVisaCopySelected(event: any) {
+  onVisaCopySelected(event: any): void {
     const file = event.target.files[0];
     this.agentForm.patchValue({ visaCopy: file });
   }
 
-  onPhotoSelected(event: any) {
+  onPhotoSelected(event: any): void {
     const file = event.target.files[0];
     this.agentForm.patchValue({ photo: file });
   }

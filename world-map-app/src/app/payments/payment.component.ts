@@ -11,6 +11,7 @@ import {
   StripeElementsOptions,
 } from '@stripe/stripe-js';
 
+import { doc, Firestore, setDoc } from '@angular/fire/firestore';
 import { StripeCardComponent, StripeService } from 'ngx-stripe';
 import { CommonUtils } from '../utils/common-utils';
 import { PaymentService } from './payments.service';
@@ -50,6 +51,7 @@ export class PaymentComponent implements OnInit, AfterViewInit {
     private fb: FormBuilder,
     private stripeService: StripeService,
     private paymentService: PaymentService,
+    private firestore: Firestore,
     private route: ActivatedRoute,
     private router: Router
   ) {
@@ -81,18 +83,25 @@ export class PaymentComponent implements OnInit, AfterViewInit {
 
         // Step 1: Create Payment Intent
         this.paymentService
-          .createPaymentIntent(1000)
+          .createPaymentIntent(this.amount)
           .subscribe(({ clientSecret }) => {
             // Step 2: Confirm Payment
             this.paymentService
               .confirmPayment(clientSecret, this.card.element, { name }) //email
-              .subscribe((result) => {
+              .subscribe(async (result) => {
                 if (result.error) {
                   console.error('Payment failed:', result.error.message);
                 } else if (result.paymentIntent.status === 'succeeded') {
                   console.log('Payment succeeded!');
+                  // Update agent status in Firebase
+                  const agentId = this.route.snapshot.queryParams['agentId'];
+                  await setDoc(
+                    doc(this.firestore, 'agents', agentId),
+                    { status: 'completed' },
+                    { merge: true }
+                  );
                   this.router.navigate(['/agent-portal'], {
-                    queryParams: { paymentSuccess: true },
+                    queryParams: { agentId, paymentSuccess: true },
                   });
                 }
               });

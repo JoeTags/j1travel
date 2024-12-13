@@ -5,7 +5,7 @@ import {
   collection,
   collectionData,
 } from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
+import { BehaviorSubject, from, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -13,15 +13,26 @@ import { Observable } from 'rxjs';
 export class AgentService {
   constructor(private firestore: Firestore) {}
 
+  private formDataSubject = new BehaviorSubject<any>(null);
+  formData$ = this.formDataSubject.asObservable();
+
+  setFormData(data: any): void {
+    this.formDataSubject.next(data);
+  }
+
+  getFormData(): any {
+    return this.formDataSubject.value;
+  }
+
   /**
    * Adds a new agent to the Firestore collection
    * @param agentData - The agent data to be added
    * @returns A Promise that resolves when the data is added
    */
-  addAgent(agentData: any): Promise<any> {
+  addAgent(agentData: any): Observable<any> {
     const agentCollection = collection(this.firestore, 'agents');
     console.log('submitting');
-    return addDoc(agentCollection, agentData);
+    return from(addDoc(agentCollection, agentData));
   }
 
   /**
