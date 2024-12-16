@@ -94,8 +94,8 @@ export class MapComponent implements OnInit, AfterViewInit {
                 <h3>${agent.name || 'Unknown Agent'}</h3>
                 <p>${agent.description || 'No description available'}</p>
                 ${
-                  agent.photoUrl
-                    ? `<img src="${agent.photoUrl}" alt="${agent.name}" width="100" />`
+                  agent.photo
+                    ? `<img src="${agent.photo}" alt="${agent.name}" width="100" />`
                     : ''
                 }
               `)

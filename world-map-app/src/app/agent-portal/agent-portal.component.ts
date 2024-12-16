@@ -197,7 +197,8 @@ export class AgentPortalComponent implements OnInit {
   }
 
   continueAgentCreation(): void {
-    if (!this.user) { // todo: fix this bug
+    if (!this.user) {
+      // todo: fix this bug
       console.error('User not authenticated. Cannot create agent.');
       return;
     }

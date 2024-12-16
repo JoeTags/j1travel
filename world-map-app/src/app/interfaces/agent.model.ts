@@ -7,11 +7,10 @@ export interface Agent {
     description: string;
     email: string;
     membership: string;
-    visaUrl: string;
-    photoUrl: string;
+    visaCopy: string;
+    photo: string;
     location: {
       latitude: number;
       longitude: number;
     };
   }
-  
