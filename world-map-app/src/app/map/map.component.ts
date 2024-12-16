@@ -1,11 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AfterViewInit, Component, OnInit } from '@angular/core';
-import { getAuth, signInAnonymously } from '@angular/fire/auth';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInAnonymously,
+} from '@angular/fire/auth';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import * as mapboxgl from 'mapbox-gl';
-import { catchError, from, Observable, of, switchMap, tap } from 'rxjs';
+import { catchError, from, map, Observable, of, tap } from 'rxjs';
 import { environment } from '../../environments/environments';
 import { AgentService } from '../agent-portal/agent.service';
 import { Agent } from '../interfaces/agent.model';
@@ -19,31 +23,52 @@ import { Agent } from '../interfaces/agent.model';
 export class MapComponent implements OnInit, AfterViewInit {
   map!: mapboxgl.Map;
   agents: Agent[] = [];
-  constructor(private router: Router, private agentService: AgentService) {} //private agentService: AgentService
+  user: any = null;
+  constructor(
+    private router: Router,
+    private agentService: AgentService,
+    private http: HttpClient
+  ) {} //private agentService: AgentService
 
   ngOnInit(): void {
     (mapboxgl as any).accessToken = environment.mapboxAccessToken;
-    this.authenticateUser().pipe(
-      tap(() => {
-        // Set the Mapbox access token after authentication
-        (mapboxgl as any).accessToken = environment.mapboxAccessToken;
-      }),
-      switchMap(() => {
-        // Load agents only if authenticated
-        console.log("get agents:", )
-        return this.agentService.getAgents();
-      }),
-      tap((agents) => {
-        this.agents = agents;
-        console.log('Agents loaded:', this.agents);
-        this.addAgentMarkers();
-      }),
-      catchError((error) => {
-        console.error('Error during initialization:', error);
-        return of();
-      })
-    );
-    this.addAgentMarkers();
+    // this.agentService.getAgents();
+    // console.log('Agents loaded:', this.agents);
+    const auth = getAuth();
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('User authenticated:', user.uid);
+        console.log('Current User UID:', auth.currentUser?.uid);
+        this.user = user;
+        this.agentService.getAgents().subscribe((agents) => {
+          console.log('Agents:', agents);
+          this.addAgentMarkers();
+        });
+      } else {
+        console.log('No user authenticated. Signing in anonymously...');
+        signInAnonymously(auth).then((cred) => {
+          console.log('Anonymous sign-in successful:', cred.user.uid);
+          this.user = cred.user;
+        });
+      }
+    });
+    // this.authenticateUser().pipe(
+    //   switchMap(() => {
+    //     // Load agents only if authenticated
+    //     console.log('get agents:');
+    //     return this.agentService.getAgents();
+    //   }),
+    //   tap((agents) => {
+    //     this.agents = agents;
+    //     console.log('Agents loaded:', this.agents);
+    //     this.addAgentMarkers();
+    //   }),
+    //   catchError((error) => {
+    //     console.error('Error during initialization:', error);
+    //     return of();
+    //   })
+    // );
+    // this.addAgentMarkers();
   }
 
   ngAfterViewInit(): void {
@@ -62,30 +87,57 @@ export class MapComponent implements OnInit, AfterViewInit {
 
   private authenticateUser(): Observable<void> {
     const auth = getAuth();
-
     return new Observable<void>((observer) => {
-      if (!auth.currentUser) {
-        from(signInAnonymously(auth))
-          .pipe(
-            tap(() => {
-              console.log('User signed in anonymously:', auth.currentUser?.uid);
-            }),
-            catchError((error) => {
-              console.error('Authentication error:', error);
-              return of();
-            })
-          )
-          .subscribe(
-            () => observer.next(),
-            () => observer.complete()
-          );
-      } else {
-        console.log('User already authenticated:', auth.currentUser?.uid);
-        observer.next();
-        observer.complete();
-      }
+      onAuthStateChanged(
+        auth,
+        (user) => {
+          if (user) {
+            console.log('User authenticated:', user.uid);
+            this.user = user;
+            observer.next(); // Emit success
+            observer.complete(); // Complete the Observable
+          } else {
+            console.log('No user authenticated. Signing in anonymously...');
+            from(signInAnonymously(auth))
+              .pipe(
+                tap((cred) => {
+                  console.log('Anonymous sign-in successful:', cred.user.uid);
+                  this.user = cred.user;
+                  observer.next(); // Emit success after sign-in
+                  observer.complete(); // Complete the Observable
+                }),
+                catchError((error) => {
+                  console.error('Error during anonymous sign-in:', error);
+                  observer.error(error); // Emit error
+                  return of(); // Return empty observable to avoid unhandled errors
+                })
+              )
+              .subscribe();
+          }
+        },
+        (error) => {
+          console.error('Error in onAuthStateChanged:', error);
+          observer.error(error); // Emit error if `onAuthStateChanged` fails
+        }
+      );
     });
   }
+
+  // private authenticateUser(): Observable<void> {
+  //   const auth = getAuth();
+  //   onAuthStateChanged(auth, (user) => {
+  //     if (user) {
+  //       console.log('User authenticated:', user.uid);
+  //       this.user = user;
+  //     } else {
+  //       console.log('No user authenticated. Signing in anonymously...');
+  //       signInAnonymously(auth).then((cred) => {
+  //         console.log('Anonymous sign-in successful:', cred.user.uid);
+  //         this.user = cred.user;
+  //       });
+  //     }
+  //   });
+  // }
 
   addCountryLayers(): void {
     // Add a source for the country boundaries
@@ -158,6 +210,7 @@ export class MapComponent implements OnInit, AfterViewInit {
 
   addAgentMarkers(): void {
     this.agents.forEach((agent) => {
+      console.log('agent:', agent);
       const marker = new mapboxgl.Marker()
         .setLngLat([agent.location.longitude, agent.location.latitude])
         .setPopup(
@@ -169,6 +222,27 @@ export class MapComponent implements OnInit, AfterViewInit {
         )
         .addTo(this.map);
     });
+  }
+
+  private getLocationFromAddress(
+    city: string,
+    country: string
+  ): Observable<{ latitude: number; longitude: number }> {
+    const address = `${city}, ${country}`;
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+      address
+    )}.json?access_token=${environment.mapboxAccessToken}`;
+
+    return this.http.get<any>(url).pipe(
+      map((res) => {
+        const [longitude, latitude] = res.features[0].center;
+        return { latitude, longitude };
+      }),
+      catchError((error) => {
+        console.error('Error fetching location:', error);
+        return of({ latitude: 0, longitude: 0 });
+      })
+    );
   }
 
   goToAgentPortal(): void {

@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import {
-  Firestore,
   addDoc,
   collection,
   collectionData,
+  Firestore,
 } from '@angular/fire/firestore';
 import { BehaviorSubject, from, Observable } from 'rxjs';
 
