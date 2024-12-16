@@ -151,14 +151,14 @@ export class AgentPortalComponent implements OnInit {
       return;
     }
 
-    if (this.agentForm.valid) {
+    if (this.agentForm) {
       const agentId =
         this.agentId || doc(collection(this.firestore, 'agents')).id;
       this.agentId = agentId;
 
       const visaFile = this.agentForm.get('visaCopy')?.value;
       const photoFile = this.agentForm.get('photo')?.value;
-
+      console.log('Visa file, PhotoFile:', visaFile, photoFile);
       const uploadVisa$ = visaFile
         ? this.fileUploadService.uploadFile(
             `visas/${agentId}/${visaFile.name}`,
@@ -205,6 +205,7 @@ export class AgentPortalComponent implements OnInit {
 
     if (this.agentForm.valid) {
       const agentId = this.agentId;
+      console.log('agentId:', agentId);
       this.uploadFiles(agentId)
         .pipe(
           switchMap(({ visaUrl, photoUrl }) =>
@@ -239,6 +240,7 @@ export class AgentPortalComponent implements OnInit {
   ): Observable<{ visaUrl: string | null; photoUrl: string | null }> {
     const visaFile = this.agentForm.get('visaCopy')?.value;
     const photoFile = this.agentForm.get('photo')?.value;
+    console.log('Visa file, PhotoFile:', visaFile, photoFile);
 
     const uploadVisa$ = visaFile
       ? this.fileUploadService.uploadFile(
