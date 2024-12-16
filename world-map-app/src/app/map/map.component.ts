@@ -40,10 +40,7 @@ export class MapComponent implements OnInit, AfterViewInit {
         console.log('User authenticated:', user.uid);
         console.log('Current User UID:', auth.currentUser?.uid);
         this.user = user;
-        this.agentService.getAgents().subscribe((agents) => {
-          console.log('Agents:', agents);
-          this.addAgentMarkers();
-        });
+        this.loadAgentsAndAddMarkers();
       } else {
         console.log('No user authenticated. Signing in anonymously...');
         signInAnonymously(auth).then((cred) => {
@@ -52,23 +49,62 @@ export class MapComponent implements OnInit, AfterViewInit {
         });
       }
     });
-    // this.authenticateUser().pipe(
-    //   switchMap(() => {
-    //     // Load agents only if authenticated
-    //     console.log('get agents:');
-    //     return this.agentService.getAgents();
-    //   }),
-    //   tap((agents) => {
-    //     this.agents = agents;
-    //     console.log('Agents loaded:', this.agents);
-    //     this.addAgentMarkers();
-    //   }),
-    //   catchError((error) => {
-    //     console.error('Error during initialization:', error);
-    //     return of();
-    //   })
-    // );
-    // this.addAgentMarkers();
+  }
+
+  private loadAgentsAndAddMarkers(): void {
+    this.agentService.getAgents().subscribe((agents) => {
+      console.log('Agents:', agents);
+
+      // Map through agents and resolve their locations
+      const locationPromises = agents.map((agent) =>
+        this.getLocationFromAddress(agent.city, agent.country)
+          .toPromise()
+          .then((location) => {
+            agent.location = location; // Add resolved location to agent
+            return agent;
+          })
+      );
+
+      Promise.all(locationPromises).then((resolvedAgents) => {
+        this.agents = resolvedAgents; // Save updated agents with locations
+        this.addAgentMarkers(); // Add markers to the map
+      });
+    });
+  }
+
+  addAgentMarkers(): void {
+    if (!this.map) {
+      console.error('Map is not initialized.');
+      return;
+    }
+
+    if (!this.agents || this.agents.length === 0) {
+      console.warn('No agents available to add markers.');
+      return;
+    }
+
+    this.agents.forEach((agent) => {
+      if (agent.location?.latitude && agent.location?.longitude) {
+        console.log('Adding marker for agent:', agent);
+
+        const marker = new mapboxgl.Marker()
+          .setLngLat([agent.location.longitude, agent.location.latitude])
+          .setPopup(
+            new mapboxgl.Popup().setHTML(`
+                <h3>${agent.name || 'Unknown Agent'}</h3>
+                <p>${agent.description || 'No description available'}</p>
+                ${
+                  agent.photoUrl
+                    ? `<img src="${agent.photoUrl}" alt="${agent.name}" width="100" />`
+                    : ''
+                }
+              `)
+          )
+          .addTo(this.map);
+      } else {
+        console.warn('Invalid location for agent:', agent);
+      }
+    });
   }
 
   ngAfterViewInit(): void {
@@ -208,21 +244,21 @@ export class MapComponent implements OnInit, AfterViewInit {
     });
   }
 
-  addAgentMarkers(): void {
-    this.agents.forEach((agent) => {
-      console.log('agent:', agent);
-      const marker = new mapboxgl.Marker()
-        .setLngLat([agent.location.longitude, agent.location.latitude])
-        .setPopup(
-          new mapboxgl.Popup().setHTML(`
-            <h3>${agent.name}</h3>
-            <p>${agent.description}</p>
-            <img src="${agent.photoUrl}" alt="${agent.name}" width="100" />
-          `)
-        )
-        .addTo(this.map);
-    });
-  }
+  // addAgentMarkers(): void {
+  //   this.agents.forEach((agent) => {
+  //     console.log('agent:', agent);
+  //     const marker = new mapboxgl.Marker()
+  //       .setLngLat([agent.location.longitude, agent.location.latitude])
+  //       .setPopup(
+  //         new mapboxgl.Popup().setHTML(`
+  //           <h3>${agent.name}</h3>
+  //           <p>${agent.description}</p>
+  //           <img src="${agent.photoUrl}" alt="${agent.name}" width="100" />
+  //         `)
+  //       )
+  //       .addTo(this.map);
+  //   });
+  // }
 
   private getLocationFromAddress(
     city: string,
