@@ -230,11 +230,11 @@ export class MapComponent implements OnInit, AfterViewInit {
         if (country.properties && country.properties['name_en']) {
           const countryName = country.properties['name_en'];
 
-          // Create a popup at the clicked location
-          new mapboxgl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(`<h3>${countryName}</h3><p>Custom content here.</p>`)
-            .addTo(this.map);
+          // todo: Create a popup at the clicked location allowing user to select country or agents
+          // new mapboxgl.Popup()
+          //   .setLngLat(e.lngLat)
+          //   .setHTML(`<h3>${countryName}</h3><p>Custom content here.</p>`)
+          //   .addTo(this.map);
         } else {
           console.warn('Country properties are null or name_en is undefined.');
         }
@@ -283,5 +283,9 @@ export class MapComponent implements OnInit, AfterViewInit {
 
   goToAgentPortal(): void {
     this.router.navigate(['/agent-portal']);
+  }
+
+  goToRegistration(): void {
+    this.router.navigate(['/register']);
   }
 }

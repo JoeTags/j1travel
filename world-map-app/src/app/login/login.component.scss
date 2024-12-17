@@ -1,9 +1,9 @@
 .container {
-  max-width: 500px;
+  max-width: 400px;
   margin: auto;
   padding: 20px;
-  background: #f9f9f9;
-  border-radius: 10px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 
   h2 {
@@ -20,9 +20,7 @@
       font-weight: bold;
     }
 
-    input,
-    textarea,
-    select {
+    input {
       width: 100%;
       padding: 8px;
       border: 1px solid #ccc;
@@ -42,7 +40,6 @@
     color: white;
     border: none;
     border-radius: 5px;
-    cursor: pointer;
 
     &:hover {
       background-color: #0056b3;
@@ -52,5 +49,11 @@
       background-color: #ccc;
       cursor: not-allowed;
     }
+  }
+
+  .error {
+    color: red;
+    text-align: center;
+    margin-top: 10px;
   }
 }
