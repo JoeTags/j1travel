@@ -31,6 +31,7 @@ export const appRoutes: Routes = [
   },
 
   { path: '', redirectTo: '/register', pathMatch: 'full' },
+  { path: '**', redirectTo: '/register' },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: '**', redirectTo: '/login' },
 ];

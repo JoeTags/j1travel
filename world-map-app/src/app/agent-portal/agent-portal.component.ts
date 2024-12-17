@@ -80,6 +80,7 @@ export class AgentPortalComponent implements OnInit {
     this.checkAuthentication();
     this.route.queryParams.subscribe((params) => {
       this.paymentSuccess = params['paymentSuccess'] === 'true';
+      //todo: not really needed anymore, but getting lat and long from here. clear agent serive state
       const agentId = params['agentId'];
       if (agentId) {
         this.agentId = agentId;
@@ -143,6 +144,7 @@ export class AgentPortalComponent implements OnInit {
         this.agentForm.patchValue(docSnap.data());
       }
     });
+    //this.getLocationFromAddress()
   }
 
   saveDraft(): void {

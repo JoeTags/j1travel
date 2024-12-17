@@ -9,8 +9,9 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../authentication/auth.service';
+import { RegistrationService } from './registration.service';
 
 @Component({
   selector: 'app-registration',
@@ -28,7 +29,9 @@ export class RegistrationComponent implements OnInit {
     private auth: Auth,
     private firestore: Firestore,
     private router: Router,
-    private authService: AuthService
+    private route: ActivatedRoute,
+    private authService: AuthService,
+    private registrationService: RegistrationService
   ) {
     this.registrationForm = this.fb.group({
       name: ['', Validators.required],
@@ -44,11 +47,11 @@ export class RegistrationComponent implements OnInit {
 
   ngOnInit(): void {
     // Check if payment succeeded
-    const navigation = this.router.getCurrentNavigation();
-    const state = navigation?.extras?.state as { paymentSuccess: boolean };
-    if (state?.paymentSuccess) {
-      this.completeRegistration();
-    }
+    this.route.queryParams.subscribe((params) => {
+      if (params['paymentSuccess'] === 'true') {
+        this.completeRegistration();
+      }
+    });
   }
 
   onRegister(): void {
@@ -56,10 +59,12 @@ export class RegistrationComponent implements OnInit {
       console.log('Valid form, proceeding to payment...');
       const formData = this.registrationForm.value;
 
+      // Save user data in the service
+      this.registrationService.setUserData(formData);
+
       // Navigate to Payment Component with query parameters
       this.router.navigate(['/payment'], {
         queryParams: { amount: this.paymentAmount },
-        state: { userData: formData },
       });
     } else {
       console.log('Form is invalid. Please correct errors.');
@@ -67,11 +72,19 @@ export class RegistrationComponent implements OnInit {
   }
 
   completeRegistration(): void {
-    const { email, password, ...userData } = this.registrationForm.value;
+    const formData = this.registrationService.getUserData();
+
+    if (!formData) {
+      console.error('No user data available. Registration cannot proceed.');
+      return;
+    }
+
+    const { email, password, ...userData } = formData;
 
     this.authService.register(email, password, userData).subscribe({
       next: () => {
         console.log('User registered successfully');
+        this.registrationService.clearUserData(); // Clear stored data
         this.router.navigate(['/map']);
       },
       error: (err) => {
