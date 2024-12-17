@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
-import { Auth, createUserWithEmailAndPassword } from '@angular/fire/auth';
-import { doc, Firestore, setDoc } from '@angular/fire/firestore';
+import { Component, OnInit } from '@angular/core';
+import { Auth } from '@angular/fire/auth';
+import { Firestore } from '@angular/fire/firestore';
 import {
   FormBuilder,
   FormGroup,
@@ -10,6 +10,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { AuthService } from '../authentication/auth.service';
 
 @Component({
   selector: 'app-registration',
@@ -18,16 +19,19 @@ import { Router, RouterModule } from '@angular/router';
   styleUrls: ['./registration.component.scss'],
   imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterModule],
 })
-export class RegistrationComponent {
+export class RegistrationComponent implements OnInit {
   registrationForm: FormGroup;
+  paymentAmount: number = 1000;
 
   constructor(
     private fb: FormBuilder,
     private auth: Auth,
     private firestore: Firestore,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {
     this.registrationForm = this.fb.group({
+      name: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       age: ['', [Validators.required, Validators.min(18)]],
@@ -38,43 +42,81 @@ export class RegistrationComponent {
     });
   }
 
-  onSubmit() {
-    if (this.registrationForm.valid) {
-      const {
-        email,
-        password,
-        age,
-        location,
-        travelDestinations,
-        budget,
-        accommodation,
-      } = this.registrationForm.value;
-
-      // Sign up with Firebase Authentication
-      createUserWithEmailAndPassword(this.auth, email, password)
-        .then((userCredential) => {
-          const userId = userCredential.user.uid;
-
-          // Save additional user data to Firestore
-          const userData = {
-            email,
-            age,
-            location,
-            travelDestinations,
-            budget,
-            accommodation,
-            createdAt: new Date(),
-          };
-
-          return setDoc(doc(this.firestore, 'users', userId), userData);
-        })
-        .then(() => {
-          console.log('User registered and data saved successfully');
-          this.router.navigate(['/map']); // Redirect to home or another page
-        })
-        .catch((error) => {
-          console.error('Registration error:', error.message);
-        });
+  ngOnInit(): void {
+    // Check if payment succeeded
+    const navigation = this.router.getCurrentNavigation();
+    const state = navigation?.extras?.state as { paymentSuccess: boolean };
+    if (state?.paymentSuccess) {
+      this.completeRegistration();
     }
   }
+
+  onRegister(): void {
+    if (this.registrationForm.valid) {
+      console.log('Valid form, proceeding to payment...');
+      const formData = this.registrationForm.value;
+
+      // Navigate to Payment Component with query parameters
+      this.router.navigate(['/payment'], {
+        queryParams: { amount: this.paymentAmount },
+        state: { userData: formData },
+      });
+    } else {
+      console.log('Form is invalid. Please correct errors.');
+    }
+  }
+
+  completeRegistration(): void {
+    const { email, password, ...userData } = this.registrationForm.value;
+
+    this.authService.register(email, password, userData).subscribe({
+      next: () => {
+        console.log('User registered successfully');
+        this.router.navigate(['/welcome']);
+      },
+      error: (err) => {
+        console.error('Registration failed:', err);
+      },
+    });
+  }
+
+  // onSubmit() {
+  //   if (this.registrationForm.valid) {
+  //     const {
+  //       email,
+  //       password,
+  //       age,
+  //       location,
+  //       travelDestinations,
+  //       budget,
+  //       accommodation,
+  //     } = this.registrationForm.value;
+
+  //     // Sign up with Firebase Authentication
+  //     createUserWithEmailAndPassword(this.auth, email, password)
+  //       .then((userCredential) => {
+  //         const userId = userCredential.user.uid;
+
+  //         // Save additional user data to Firestore
+  //         const userData = {
+  //           email,
+  //           age,
+  //           location,
+  //           travelDestinations,
+  //           budget,
+  //           accommodation,
+  //           createdAt: new Date(),
+  //         };
+
+  //         return setDoc(doc(this.firestore, 'users', userId), userData);
+  //       })
+  //       .then(() => {
+  //         console.log('User registered and data saved successfully');
+  //         this.router.navigate(['/map']); // Redirect to home or another page
+  //       })
+  //       .catch((error) => {
+  //         console.error('Registration error:', error.message);
+  //       });
+  //   }
+  // }
 }

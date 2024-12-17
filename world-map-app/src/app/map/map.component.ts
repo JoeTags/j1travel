@@ -288,4 +288,8 @@ export class MapComponent implements OnInit, AfterViewInit {
   goToRegistration(): void {
     this.router.navigate(['/register']);
   }
+
+  goToLogin(): void {
+    this.router.navigate(['/login']);
+  }
 }

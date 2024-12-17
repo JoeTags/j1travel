@@ -1,12 +1,17 @@
 <div class="container">
-  <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()" novalidate>
+  <form [formGroup]="registrationForm" (ngSubmit)="onRegister()" novalidate>
     <h2>User Registration</h2>
 
     <!-- Email -->
     <div class="form-group">
       <label for="email">Email</label>
       <input id="email" type="email" formControlName="email" />
-      <small *ngIf="registrationForm.get('email')?.invalid && registrationForm.get('email')?.touched">
+      <small
+        *ngIf="
+          registrationForm.get('email')?.invalid &&
+          registrationForm.get('email')?.touched
+        "
+      >
         Please enter a valid email.
       </small>
     </div>
@@ -15,7 +20,12 @@
     <div class="form-group">
       <label for="password">Password</label>
       <input id="password" type="password" formControlName="password" />
-      <small *ngIf="registrationForm.get('password')?.invalid && registrationForm.get('password')?.touched">
+      <small
+        *ngIf="
+          registrationForm.get('password')?.invalid &&
+          registrationForm.get('password')?.touched
+        "
+      >
         Password must be at least 6 characters.
       </small>
     </div>
@@ -35,7 +45,10 @@
     <!-- Travel Destinations -->
     <div class="form-group">
       <label for="travelDestinations">Desired Travel Destinations</label>
-      <textarea id="travelDestinations" formControlName="travelDestinations"></textarea>
+      <textarea
+        id="travelDestinations"
+        formControlName="travelDestinations"
+      ></textarea>
     </div>
 
     <!-- Budget -->
@@ -55,7 +68,8 @@
     </div>
 
     <!-- Submit -->
-    <button type="submit" [disabled]="registrationForm.invalid">Register</button>
+    <button type="submit" [disabled]="registrationForm.invalid">
+      Register
+    </button>
   </form>
 </div>
-
