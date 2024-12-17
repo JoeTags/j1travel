@@ -2,6 +2,12 @@
   <form [formGroup]="registrationForm" (ngSubmit)="onRegister()" novalidate>
     <h2>User Registration</h2>
 
+    <!-- Name -->
+    <div class="form-group">
+      <label for="name">Name</label>
+      <input id="name" type="text" formControlName="name" />
+    </div>
+
     <!-- Email -->
     <div class="form-group">
       <label for="email">Email</label>
