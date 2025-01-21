@@ -22,6 +22,7 @@ import {
   UntypedFormBuilder,
   Validators,
 } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import {
   catchError,
@@ -35,6 +36,7 @@ import {
 } from 'rxjs';
 import { environment } from '../../environments/environments';
 import { Agent } from '../interfaces/agent.model';
+import { PaymentComponent } from '../payments/payment.component';
 import { PaymentService } from '../payments/payments.service';
 import { AgentService } from './agent.service';
 import { FileUploadService } from './file-upload.service';
@@ -59,9 +61,10 @@ export class AgentPortalComponent implements OnInit {
     private route: ActivatedRoute,
     private firestore: Firestore,
     private storage: Storage,
-    private paymentService: PaymentService,
     private agentService: AgentService,
-    private fileUploadService: FileUploadService
+    private paymentService: PaymentService,
+    private fileUploadService: FileUploadService,
+    private dialog: MatDialog
   ) {
     console.log('Firestore initialized:', firestore);
     this.agentForm = this.fb.group({
@@ -115,9 +118,18 @@ export class AgentPortalComponent implements OnInit {
 
       // Save draft and navigate to payment
       this.saveDraft();
-      this.router.navigate(['/payment'], {
-        queryParams: { amount, agentId: this.agentId },
+      const dialogRef = this.dialog.open(PaymentComponent, {
+        data: { amount, agentId: this.agentId },
+        panelClass: 'dialog-container',
+        width: '400px',
+        disableClose: true,
       });
+      dialogRef.afterClosed().subscribe((result) => {
+        console.log('Dialog closed', result);
+      });
+      // this.router.navigate(['/payment'], {
+      //   queryParams: { amount, agentId: this.agentId },
+      // });
     }
   }
 
